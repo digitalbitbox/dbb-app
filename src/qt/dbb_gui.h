@@ -26,7 +26,7 @@ public:
     std::string baseKeyPath;
     DBBMultisigWallet()
     {
-        baseKeyPath = "m/110'";
+        baseKeyPath = "m/112'";
     }
 };
 

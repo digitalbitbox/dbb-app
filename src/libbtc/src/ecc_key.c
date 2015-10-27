@@ -32,40 +32,55 @@
 #include <assert.h>
 
 #include "btc/ecc.h"
+#include "btc/hash.h"
 
 #include "random.h"
+#include "ripemd160.h"
 #include "utils.h"
 
 
-void btc_privkey_init(btc_key *privkey)
+void btc_privkey_init(btc_key* privkey)
 {
     memset(&privkey->privkey, 0, BTC_ECKEY_PKEY_LENGTH);
 }
 
-void btc_privkey_cleanse(btc_key *privkey)
+
+btc_bool btc_privkey_is_valid(btc_key* privkey)
+{
+    return ecc_verify_privatekey(privkey->privkey);
+}
+
+
+void btc_privkey_cleanse(btc_key* privkey)
 {
     memset(&privkey->privkey, 0, BTC_ECKEY_PKEY_LENGTH);
 }
 
-void btc_privkey_gen(btc_key *privkey)
+
+void btc_privkey_gen(btc_key* privkey)
 {
     if (privkey == NULL)
         return;
 
-    do
-    {
+    do {
         random_bytes(privkey->privkey, BTC_ECKEY_PKEY_LENGTH, 0);
-    } while(ecc_verify_privatekey(privkey->privkey) == 0);
+    } while (ecc_verify_privatekey(privkey->privkey) == 0);
 }
 
 
-void btc_privkey_free(btc_key *privkey)
+btc_bool btc_privkey_verify_pubkey(btc_key* privkey, btc_pubkey* pubkey)
 {
-    if (privkey == NULL)
-        return;
+    uint8_t rnddata[32], hash[32];
+    random_bytes(rnddata, 32, 0);
+    btc_hash(rnddata, 32, hash);
 
-    memset(privkey->privkey, 0, BTC_ECKEY_PKEY_LENGTH);
-    free(privkey);
+    unsigned char sig[74];
+    size_t siglen = 74;
+
+    if (!btc_key_sign_hash(privkey, hash, sig, &siglen))
+        return false;
+
+    return btc_pubkey_verify_sig(pubkey, hash, sig, siglen);
 }
 
 
@@ -79,6 +94,12 @@ void btc_pubkey_init(btc_pubkey* pubkey)
 }
 
 
+btc_bool btc_pubkey_is_valid(btc_pubkey* pubkey)
+{
+    return ecc_verify_pubkey(pubkey->pubkey, pubkey->compressed);
+}
+
+
 void btc_pubkey_cleanse(btc_pubkey* pubkey)
 {
     if (pubkey == NULL)
@@ -88,7 +109,13 @@ void btc_pubkey_cleanse(btc_pubkey* pubkey)
 }
 
 
-void btc_pubkey_from_key(btc_key *privkey, btc_pubkey* pubkey_inout)
+void btc_pubkey_get_hash160(const btc_pubkey* pubkey, uint8_t *hash160)
+{
+    ripemd160(pubkey->pubkey, pubkey->compressed ? BTC_ECKEY_COMPRESSED_LENGTH : BTC_ECKEY_UNCOMPRESSED_LENGTH, hash160);
+}
+
+
+void btc_pubkey_from_key(btc_key* privkey, btc_pubkey* pubkey_inout)
 {
     if (pubkey_inout == NULL || privkey == NULL)
         return;
@@ -100,13 +127,13 @@ void btc_pubkey_from_key(btc_key *privkey, btc_pubkey* pubkey_inout)
 }
 
 
-btc_bool btc_key_sign_hash(const btc_key *privkey, const uint8_t *hash, unsigned char *sigout, size_t *outlen)
+btc_bool btc_key_sign_hash(const btc_key* privkey, const uint8_t* hash, unsigned char* sigout, size_t* outlen)
 {
     return ecc_sign(privkey->privkey, hash, sigout, outlen);
 }
 
 
-btc_bool btc_pubkey_verify_sig(const btc_pubkey *pubkey, const uint8_t *hash, unsigned char *sigder, int len)
+btc_bool btc_pubkey_verify_sig(const btc_pubkey* pubkey, const uint8_t* hash, unsigned char* sigder, int len)
 {
     return ecc_verify_sig(pubkey->pubkey, pubkey->compressed, hash, sigder, len);
 }

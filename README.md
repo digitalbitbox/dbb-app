@@ -78,11 +78,10 @@ Libdbb is at an early stage of development.
 ## Build Instructions
 Dependencies:
 
-dbb-cli and dbb-app depend on bitcoin-core for key generation, signing, hashing, crypto, etc.
-bitcoin-core is has proven to manage 4 billion USD and is therefore very stable.
-During the compile process dbb compiles the common and util classes.
+dbb-cli and dbb-app depend on libbtc (https://github.com/libbtc/libbtc) for key generation, signing, hashing, crypto, etc.
+Libbtc is included as git subtree and will be compiled during the normal build process
 
-- bitcoin-core (included as git submodule)
+- libbtc (included as git subtree) (https://github.com/libbtc/libbtc)
 - openssl
 - https://github.com/signal11/hidapi
 - [boost](http://www.boost.org/)

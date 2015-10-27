@@ -20,7 +20,7 @@
 #include "dbb_util.h"
 #include "crypto.h"
 
-#include "../include/univalue.h"
+#include "univalue.h"
 #include "hidapi/hidapi.h"
 
 #define HID_REPORT_SIZE 2048

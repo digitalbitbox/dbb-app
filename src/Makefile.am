@@ -20,6 +20,7 @@ DBB_INCLUDES += -I$(srcdir)/univalue/include
 
 noinst_LIBRARIES = libdbb.a libbpwalletclient.a
 
+libdbb_a_CPPFLAGS = $(AM_CPPFLAGS) $(DBB_INCLUDES)
 libdbb_a_INCLUDES = ../include/dbb.h libdbb/dbb_util.h libdbb/crypto.h
 libdbb_a_SOURCES = libdbb/dbb.cpp libdbb/base64.cpp libdbb/crypto.cpp libdbb/dbb_util.h
 
@@ -34,7 +35,7 @@ dbb_cli_INCLUDES=-I$(builddir) -I$(builddir)/obj
 bin_PROGRAMS = dbb-cli
 
 dbb_cli_SOURCES = dbb_cli.cpp dbb_util.h dbb_util.cpp
-dbb_cli_CPPFLAGS = $(AM_CPPFLAGS)
+dbb_cli_CPPFLAGS = $(AM_CPPFLAGS) $(DBB_INCLUDES)
 dbb_cli_CFLAGS =
 dbb_cli_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
 dbb_cli_LDADD = $(UNIVALUE) libdbb.a $(CRYPTO_LIBS)
@@ -46,7 +47,7 @@ bin_PROGRAMS += dbb-app
 
 dbb_app_CONFIG_INCLUDES=-I$(builddir)/config
 dbb_app_SOURCES = dbb_app.h dbb_app.cpp dbb_util.h dbb_util.cpp
-dbb_app_CPPFLAGS = -fPIC $(AM_CPPFLAGS) $(QR_CFLAGS)
+dbb_app_CPPFLAGS = -fPIC $(AM_CPPFLAGS) $(QR_CFLAGS) $(DBB_INCLUDES)
 dbb_app_CFLAGS =
 dbb_app_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS) $(LIBEVENT_LDFLAGS)
 dbb_app_LDADD = libdbb.a libbpwalletclient.a $(LIBBTC) $(LIBEVENT_LIBS) $(CRYPTO_LIBS) $(LINUX_LIBS) $(UNIVALUE) $(BOOST_LIBS)
@@ -81,7 +82,7 @@ $(QT_MOC): $(QT_FORMS_H)
 $(dbb_app_OBJECTS) $(dbb_app_OBJECTS) : | $(QT_MOC)
 
 dbb_app_SOURCES += qt/dbb_gui.h $(DBB_GUI_H) qt/dbb_gui.cpp qt/qrc_dbbgui.cpp $(QT_MOC_CPP) $(QT_MOC) $(QT_FORMS_UI) $(DBB_GUI_CPP) 
-dbb_app_CPPFLAGS += $(QT_INCLUDES) $(QT_DBUS_INCLUDES) $(DBB_INCLUDES)
+dbb_app_CPPFLAGS += $(QT_INCLUDES) $(QT_DBUS_INCLUDES)
 dbb_app_LDFLAGS += $(QT_LDFLAGS)
 dbb_app_LDADD += $(QT_LIBS) $(QT_DBUS_LIBS) $(QR_LIBS) -lcurl
 

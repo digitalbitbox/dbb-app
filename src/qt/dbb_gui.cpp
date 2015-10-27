@@ -590,9 +590,9 @@ void DBBDaemonGui::parseResponse(const UniValue &response, dbb_cmd_execution_sta
             {
                 UniValue version = find_value(deviceObj, "version");
                 UniValue name = find_value(deviceObj, "name");
-                UniValue xpub = find_value(deviceObj, "xpub");
+                UniValue seeded = find_value(deviceObj, "seeded");
                 UniValue lock = find_value(deviceObj, "lock");
-                bool walletAvailable = cachedWalletAvailableState = (xpub.isStr() && xpub.get_str().size() > 0);
+                bool walletAvailable = (seeded.isBool() && seeded.isTrue());
                 bool lockAvailable = (lock.isBool() && lock.isTrue());
 
                 if (version.isStr())
@@ -879,7 +879,7 @@ bool DBBDaemonGui::checkPaymentProposals()
     std::string walletsResponse;
     bool walletsAvailable = vMultisigWallets[0].client.GetWallets(walletsResponse);
 
-    if (walletsAvailable)
+    if (!walletsAvailable)
     {
         QMessageBox::warning(this, tr("No Wallet"),
                              tr("No Copay Wallet Available"),
@@ -929,19 +929,21 @@ bool DBBDaemonGui::checkPaymentProposals()
                 if (reply == QMessageBox::No)
                     return false;
 
-                std::vector<std::pair<std::string, uint256> > inputHashesAndPaths;
+                std::vector<std::pair<std::string, std::vector<unsigned char> > > inputHashesAndPaths;
                 vMultisigWallets[0].client.ParseTxProposal(values[0], inputHashesAndPaths);
 
-                std::string hexHash = DBB::HexStr(inputHashesAndPaths[0].second, inputHashesAndPaths[0].second+32);
+                std::string hexHash = DBB::HexStr(&inputHashesAndPaths[0].second[0], &inputHashesAndPaths[0].second[0]+32);
 
-                std::string command = "{\"sign\": { \"type\": \"hash\", \"data\" : \"" + BitPayWalletClient::ReversePairs(hexHash) + "\", \"keypath\" : \"" + vMultisigWallets[0].baseKeyPath + "/45'/" + inputHashesAndPaths[0].first + "\" }}";
+                std::string command = "{\"sign\": { \"type\": \"hash\", \"data\" : \"" + hexHash + "\", \"keypath\" : \"" + vMultisigWallets[0].baseKeyPath + "/45'/" + inputHashesAndPaths[0].first + "\" }}";
                 //printf("Command: %s\n", command.c_str());
 
-                command = "{\"sign\": { \"type\": \"meta\", \"meta\" : \"somedata\", \"data\" : [ { \"hash\" : \"" + BitPayWalletClient::ReversePairs(hexHash) + "\", \"keypath\" : \"" + vMultisigWallets[0].baseKeyPath + "/45'/" + inputHashesAndPaths[0].first + "\" } ] } }";
+                command = "{\"sign\": { \"type\": \"meta\", \"meta\" : \"somedata\", \"data\" : [ { \"hash\" : \"" + hexHash + "\", \"keypath\" : \"" + vMultisigWallets[0].baseKeyPath + "/45'/" + inputHashesAndPaths[0].first + "\" } ] } }";
                 printf("Command: %s\n", command.c_str());
 
                 QTexecuteCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [&ret, values, inputHashesAndPaths, this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
                     //send a signal to the main thread
+                    processComnand = false;
+                    
                     printf("cmd back: %s\n", cmdOut.c_str());
                     UniValue jsonOut(UniValue::VOBJ);
                     jsonOut.read(cmdOut);

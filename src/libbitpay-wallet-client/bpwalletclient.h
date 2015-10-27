@@ -56,6 +56,8 @@ public:
     std::string network;
 };
 
+
+
 class BitPayWalletClient
 {
 public:
@@ -90,7 +92,7 @@ public:
     bool GetWallets(std::string& response);
 
     //!parse a transaction proposal, export inputs keypath/hashes ready for signing
-    std::string ParseTxProposal(const UniValue& txProposal, std::vector<std::pair<std::string, uint8_t[32]> >& vInputTxHashes);
+    std::string ParseTxProposal(const UniValue& txProposal, std::vector<std::pair<std::string, std::vector<unsigned char> > >& vInputTxHashes);
 
     //!post signatures for a transaction proposal to the wallet server
     bool PostSignaturesForTxProposal(const UniValue& txProposal, const std::vector<std::string>& vHexSigs);
