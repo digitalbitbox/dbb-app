@@ -13,6 +13,11 @@
 #define FIRMWARE_CHUNKSIZE 4096
 #define DBB_APP_LENGTH 225280 //flash size minus bootloader length
 
+#define BACKUP_KEY_PBKDF2_SALT     "Digital Bitbox"
+#define BACKUP_KEY_PBKDF2_SALTLEN  14
+#define BACKUP_KEY_PBKDF2_ROUNDS   20480
+#define BACKUP_KEY_PBKDF2_HMACLEN  64
+
 namespace DBB {
 
 enum dbb_device_mode {
@@ -54,4 +59,6 @@ bool decryptAndDecodeCommand(const std::string &cmdIn,
 bool encryptAndEncodeCommand(const std::string &cmd,
                              const std::string &password,
                              std::string &base64strOut);
-}
+
+std::string getStretchedBackupHexKey(const std::string &passphrase);
+} //end namespace DBB

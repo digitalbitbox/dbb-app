@@ -28,6 +28,11 @@
 
 #include <btc/hash.h>
 
+//defined in libbtc sha2.h
+extern "C" {
+    extern void hmac_sha512(const uint8_t* key, const uint32_t keylen, const uint8_t* msg, const uint32_t msglen, uint8_t* hmac);
+}
+
 #define HID_MAX_BUF_SIZE 5120
 
 #ifdef DBB_ENABLE_DEBUG
@@ -373,5 +378,51 @@ bool encryptAndEncodeCommand(const std::string& cmd, const std::string& password
     base64strOut = base64_encode(enc_cat, inpadlen + DBB_AES_BLOCKSIZE);
 
     return true;
+}
+
+void pbkdf2_hmac_sha512(const uint8_t *pass, int passlen, uint8_t *key, int keylen)
+{
+    uint32_t i, j, k;
+    uint8_t f[BACKUP_KEY_PBKDF2_HMACLEN], g[BACKUP_KEY_PBKDF2_HMACLEN];
+    uint32_t blocks = keylen / BACKUP_KEY_PBKDF2_HMACLEN;
+
+    static uint8_t salt[BACKUP_KEY_PBKDF2_SALTLEN + 4];
+    memset(salt, 0, sizeof(salt));
+    memcpy(salt, BACKUP_KEY_PBKDF2_SALT, strlen(BACKUP_KEY_PBKDF2_SALT));
+
+    if (keylen & (BACKUP_KEY_PBKDF2_HMACLEN - 1)) {
+        blocks++;
+    }
+    for (i = 1; i <= blocks; i++) {
+        salt[BACKUP_KEY_PBKDF2_SALTLEN    ] = (i >> 24) & 0xFF;
+        salt[BACKUP_KEY_PBKDF2_SALTLEN + 1] = (i >> 16) & 0xFF;
+        salt[BACKUP_KEY_PBKDF2_SALTLEN + 2] = (i >> 8) & 0xFF;
+        salt[BACKUP_KEY_PBKDF2_SALTLEN + 3] = i & 0xFF;
+        hmac_sha512(pass, passlen, salt, BACKUP_KEY_PBKDF2_SALTLEN + 4, g);
+        memcpy(f, g, BACKUP_KEY_PBKDF2_HMACLEN);
+        for (j = 1; j < BACKUP_KEY_PBKDF2_ROUNDS; j++) {
+            hmac_sha512(pass, passlen, g, BACKUP_KEY_PBKDF2_HMACLEN, g);
+            for (k = 0; k < BACKUP_KEY_PBKDF2_HMACLEN; k++) {
+                f[k] ^= g[k];
+            }
+        }
+        if (i == blocks && (keylen & (BACKUP_KEY_PBKDF2_HMACLEN - 1))) {
+            memcpy(key + BACKUP_KEY_PBKDF2_HMACLEN * (i - 1), f, keylen & (BACKUP_KEY_PBKDF2_HMACLEN - 1));
+        } else {
+            memcpy(key + BACKUP_KEY_PBKDF2_HMACLEN * (i - 1), f, BACKUP_KEY_PBKDF2_HMACLEN);
+        }
+    }
+    memset(f, 0, sizeof(f));
+    memset(g, 0, sizeof(g));
+}
+
+std::string getStretchedBackupHexKey(const std::string &passphrase)
+{
+
+    assert(passphrase.size() > 0);
+
+    uint8_t key[BACKUP_KEY_PBKDF2_HMACLEN];
+    pbkdf2_hmac_sha512((const uint8_t *)&passphrase[0], passphrase.size(), key, sizeof(key));
+    return DBB::HexStr(key, key+sizeof(key));
 }
 }
