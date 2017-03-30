@@ -111,6 +111,9 @@
        <property name="text">
         <string>This device is uninitialized. Please set the device name and the password.</string>
        </property>
+       <property name="wordWrap">
+        <bool>true</bool>
+       </property>
       </widget>
      </item>
      <item>

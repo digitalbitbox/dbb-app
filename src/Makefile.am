@@ -13,14 +13,17 @@ UNIVALUE=univalue/libunivalue.la
 
 if TARGET_WINDOWS
   HIDAPI=hidapi/windows/libhidapi.la
+  HIDAPI_FIRMWARE=hidapi/windows/libhidapi.la
 endif
 
 if TARGET_OSX
   HIDAPI=hidapi/mac/libhidapi.la
+  HIDAPI_FIRMWARE=hidapi/mac/libhidapi.la
 endif
 
 if TARGET_LINUX
   HIDAPI=hidapi/linux/libhidapi-hidraw.la
+  HIDAPI_FIRMWARE=hidapi/libusb/libhidapi-libusb.la
 endif
 
 $(LIBBTC): $(wildcard libbtc/src/*) $(wildcard libbtc/include/*)
@@ -32,6 +35,9 @@ $(UNIVALUE): $(wildcard univalue/lib/*) $(wildcard univalue/include/*)
 	$(AM_V_at)$(MAKE) $(AM_MAKEFLAGS) -C $(@D) $(@F)
 
 $(HIDAPI):
+	$(AM_V_at)$(MAKE) $(AM_MAKEFLAGS) -C $(@D) $(@F)
+
+$(HIDAPI_FIRMWARE):
 	$(AM_V_at)$(MAKE) $(AM_MAKEFLAGS) -C $(@D) $(@F)
 	
 HIDAPI_INCLUDES = -I$(srcdir)/hidapi
@@ -54,13 +60,19 @@ libbpwalletclient_a_LIBADD = $(HIDAPI) $(LIBBTC) $(UNIVALUE)
 dbb_cli_CONFIG_INCLUDES=-I$(builddir)/config
 dbb_cli_INCLUDES=-I$(builddir) -I$(builddir)/obj
 
-bin_PROGRAMS = dbb-cli
+bin_PROGRAMS = dbb-cli dbb-firmware
 
 dbb_cli_SOURCES = dbb_cli.cpp dbb_util.h dbb_util.cpp
 dbb_cli_CPPFLAGS = $(AM_CPPFLAGS) $(DBB_INCLUDES)
 dbb_cli_CFLAGS =
 dbb_cli_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
 dbb_cli_LDADD = $(UNIVALUE) libdbb.a $(LIBBTC) $(HIDAPI) 
+
+dbb_firmware_SOURCES = dbb_firmware.cpp dbb_util.h dbb_util.cpp firmware.h
+dbb_firmware_CPPFLAGS = $(AM_CPPFLAGS) $(DBB_INCLUDES)
+dbb_firmware_CFLAGS =
+dbb_firmware_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
+dbb_firmware_LDADD = libdbb.a $(UNIVALUE) $(LIBBTC) $(HIDAPI_FIRMWARE) 
 
 
 #check if we should build the dbb app

@@ -896,6 +896,7 @@ void DBBDaemonGui::hideSessionPasswordView()
 
 void DBBDaemonGui::showSetPasswordInfo()
 {
+    QMessageBox::information(this, "Password info", tr("Changing the device password will NOT change your backup password. Please make sure you remember your backup password."), QMessageBox::Ok);
     ui->modalBlockerView->showSetPassword();
 }
 
@@ -1500,6 +1501,8 @@ void DBBDaemonGui::eraseBackup(const QString& backupFilename)
 
 void DBBDaemonGui::restoreBackup(const QString& backupFilename)
 {
+    QMessageBox::information(this, "Password info", tr("Restoring a backup requires the backup password that was chosen during device initialisation (even if you have changed the device password afterwards). If you enter a wrong password, it will create a different wallet (plausible deniability)"), QMessageBox::Ok);
+
     bool ok;
     QString tempBackupPassword = QInputDialog::getText(this, "", tr("Enter backup-file password"), QLineEdit::Password, "", &ok);
     if (!ok || tempBackupPassword.isEmpty())
@@ -2287,10 +2290,11 @@ void DBBDaemonGui::SingleWalletUpdateWallets(bool showLoading)
     if (!singleWallet->client.IsSeeded())
         return;
     
-    if (this->ui->balanceLabel->text() == "?") {
+    if (this->ui->balanceLabel->text() == "") {
         this->ui->balanceLabel->setText("Loading...");
         this->ui->singleWalletBalance->setText("Loading...");
-
+    }
+    if (this->ui->currentAddress->text() == "") {
         this->ui->currentAddress->setText("Loading...");
     }
 
