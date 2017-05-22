@@ -254,6 +254,8 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
     connect(ui->upgradeFirmware, SIGNAL(clicked()), this, SLOT(upgradeFirmwareButton()));
     connect(ui->openSettings, SIGNAL(clicked()), this, SLOT(showSettings()));
     connect(ui->pairDeviceButton, SIGNAL(clicked()), this, SLOT(pairSmartphone()));
+    connect(ui->sendMax, SIGNAL(stateChanged(int)), this, SLOT(sendMaxCheckboxDidChange(int)));
+    connect(ui->feeLevel, SIGNAL(currentIndexChanged(int)), this, SLOT(sendMaxCheckboxDidChange(int)));
     ui->upgradeFirmware->setVisible(true);
     ui->keypathLabel->setVisible(false);//hide keypath label for now (only tooptip)
     connect(ui->tableWidget, SIGNAL(doubleClicked(QModelIndex)),this,SLOT(historyShowTx(QModelIndex)));
@@ -966,6 +968,7 @@ void DBBDaemonGui::modalStateChanged(bool state)
 {
     this->ui->sendToAddress->setEnabled(!state);
     this->ui->sendAmount->setEnabled(!state);
+    sendMaxCheckboxDidChange(0);
 }
 
 void DBBDaemonGui::updateModalWithQRCode(const QString& string)
@@ -2139,18 +2142,35 @@ void DBBDaemonGui::updateReceivingAddress(DBBWallet *wallet, const std::string &
     ui->keypathLabel->setText(QString::fromStdString(info));
 }
 
+void DBBDaemonGui::sendMaxCheckboxDidChange(int state)
+{
+    if (this->ui->sendMax->isChecked()) {
+        this->ui->sendAmount->setText("All funds");
+        this->ui->sendAmount->setEnabled(false);
+    }
+    else {
+        this->ui->sendAmount->setEnabled(true);
+        if ( this->ui->sendAmount->text() == "All funds") {
+            this->ui->sendAmount->setText("");
+        }
+    }
+    int64_t fee = singleWallet->client.GetFeeForPriority(this->ui->feeLevel->currentIndex());
+    ui->feeInfo->setText(tr("Feerate to use: %1").arg(QString::number(fee/10000000.0)));
+}
+
 void DBBDaemonGui::createTxProposalPressed()
 {
     if (!singleWallet->client.IsSeeded())
         return;
 
     int64_t amount = 0;
-    if (this->ui->sendAmount->text().size() == 0 || !DBB::ParseMoney(this->ui->sendAmount->text().toStdString(), amount))
-        return showAlert("Error", "Invalid amount");
+    if (!this->ui->sendMax->isChecked()) {
+        if (this->ui->sendAmount->text().size() == 0 || !DBB::ParseMoney(this->ui->sendAmount->text().toStdString(), amount))
+            return showAlert("Error", "Invalid amount");
 
-    if (cachedDeviceLock && !comServer->mobileAppConnected)
-        return showAlert("Error", "2FA enabled but no mobile app found online");
-
+        if (cachedDeviceLock && !comServer->mobileAppConnected)
+            return showAlert("Error", "2FA enabled but no mobile app found online");
+    }
     this->ui->sendToAddress->clearFocus();
     this->ui->sendAmount->clearFocus();
     DBBNetThread* thread = DBBNetThread::DetachThread();
@@ -2540,6 +2560,7 @@ void DBBDaemonGui::executeNetUpdateWallet(DBBWallet* wallet, bool showLoading, s
                 wallet->shouldUpdateWalletAgain = false;
                 walletsAvailable = wallet->client.GetWallets(walletsResponse);
                 wallet->client.GetFeeLevels();
+                this->sendMaxCheckboxDidChange(0);
                 std::string txHistoryResponse;
                 if (wallet == this->singleWallet) {
                     bool transactionHistoryAvailable = wallet->client.GetTransactionHistory(txHistoryResponse);

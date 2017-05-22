@@ -339,7 +339,7 @@ bool BitPayWalletClient::GetLastKnownAddress(std::string& address, std::string& 
 }
 
 
-bool BitPayWalletClient::CreatePaymentProposal(const std::string& address, uint64_t amount, uint64_t feeperkb, UniValue& paymentProposalOut, std::string& errorOut)
+bool BitPayWalletClient::CreatePaymentProposal(const std::string& address, uint64_t amount, uint64_t feeperkb, UniValue& paymentProposalOut, std::string& errorOut, bool checkSingleOutput)
 {
     //form request
     UniValue outputs(UniValue::VARR);
@@ -347,15 +347,39 @@ bool BitPayWalletClient::CreatePaymentProposal(const std::string& address, uint6
     //currently we only support a single output
     UniValue mainOutput(UniValue::VOBJ);
 
+    // amount == 0 indicates to send max
+    uint64_t amount_to_send = amount;
+    if (amount == 0) {
+        std::string walletResponse;
+        if (!GetWallets(walletResponse)) {
+            errorOut = "Could not load balance";
+            return false;
+        }
+
+        UniValue walletResponseUni;
+        walletResponseUni.read(walletResponse);
+
+        UniValue balanceObj = find_value(walletResponseUni, "balance");
+        if (!balanceObj.isObject()) {
+            errorOut = "Could not load balance";
+            return false;
+        }
+        UniValue totalAmountUni = find_value(balanceObj, "totalAmount");
+        if (!totalAmountUni.isNum()) {
+            errorOut = "Could not load balance";
+            return false;
+        }
+        amount_to_send = totalAmountUni.get_int64();
+    }
     //add the output
     mainOutput.push_back(Pair("toAddress", address));
-    mainOutput.push_back(Pair("amount", amount));
+    mainOutput.push_back(Pair("amount", amount_to_send));
     mainOutput.push_back(Pair("message", ""));
     mainOutput.push_back(Pair("script", ""));
     outputs.push_back(mainOutput);
 
     UniValue jsonArgs(UniValue::VOBJ);
-    jsonArgs.push_back(Pair("feePerKb", feeperkb));
+    jsonArgs.push_back(Pair("feePerKb", (amount != 0 ? feeperkb : 0)));
     jsonArgs.push_back(Pair("payProUrl", false));
     jsonArgs.push_back(Pair("type", "simple"));
     jsonArgs.push_back(Pair("version", "1.0.0"));
@@ -406,24 +430,58 @@ bool BitPayWalletClient::CreatePaymentProposal(const std::string& address, uint6
             }
             paymentProposalOut.read(response);
 
-            if (!PublishTxProposal(paymentProposalOut, errorOut))
-                return false;
-            
-            return true;
         } else {
             //unknown error
             UniValue messageUni;
             messageUni = find_value(responseUni, "message");
+            codeUni = find_value(responseUni, "code");
+
+            //
+            if (codeUni.isStr() && codeUni.get_str() == "INSUFFICIENT_FUNDS_FOR_FEE" && checkSingleOutput) {
+                return CreatePaymentProposal(address, amount_to_send-1000, feeperkb, paymentProposalOut, errorOut, true);
+            }
+
 
             if (messageUni.isStr())
                 errorOut = messageUni.get_str();
+
             return false;
+        }
+    } else {
+        paymentProposalOut.read(response);
+    }
+
+    if (amount == 0) {
+        // send max proposal
+
+        if (paymentProposalOut.isObject()) {
+            // count inputs
+            UniValue inputsObj = find_value(paymentProposalOut, "inputs");
+            std::vector<UniValue> inputs = inputsObj.getValues();
+
+            // assume 149 bytes per input (32 txid, 4 pos, 74 der sig inc. push, 35 pubkey inc. push, 4 nSequence)
+            // assume 34 bytes per output (25+1 P2PKH, 8 amount,
+            // assume 10 bytes for rest of tx
+
+            uint64_t estimatedSize = 10 + 34 + (149 * inputs.size());
+            uint64_t feeWillBe = (estimatedSize/1000.0)*feeperkb;
+
+            // BWS min fee calculation is buggy, "looping down" the value is required
+            return CreatePaymentProposal(address, amount_to_send - feeWillBe, feeperkb, paymentProposalOut, errorOut, true);
         }
     }
 
-    paymentProposalOut.read(response);
     if (!paymentProposalOut.isObject())
         return false;
+
+    if (checkSingleOutput) {
+        UniValue outputsObj = find_value(paymentProposalOut, "outputs");
+        std::vector<UniValue> outputs = outputsObj.getValues();
+        if (outputs.size() > 1) {
+            errorOut = "Could not calculate maximal amount to send out";
+            return false;
+        }
+    }
 
     if (!PublishTxProposal(paymentProposalOut, errorOut))
         return false;
@@ -567,7 +625,7 @@ bool BitPayWalletClient::GetFeeLevels()
         return false;
 
     long httpStatusCode = 0;
-    if (!SendRequest("get", "/v1/feelevels/?network=livenet&r="+std::to_string(CheapRandom()), "{}", response, httpStatusCode))
+    if (!SendRequest("get", "/v1/feelevels/?network="+std::string(testnet ? "testnet" : "livenet")+"&r="+std::to_string(CheapRandom()), "{}", response, httpStatusCode))
         return false;
 
     if (httpStatusCode != 200)

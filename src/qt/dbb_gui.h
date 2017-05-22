@@ -359,6 +359,7 @@ private slots:
     //!gets called when a new address is available
     void updateReceivingAddress(DBBWallet *wallet, const std::string &newAddress, const std::string &keypath);
     //!check the UI values and create a payment proposal from them, sign and post them
+    void sendMaxCheckboxDidChange(int val);
     void createTxProposalPressed();
     //!Report about a submitted payment proposal
     void reportPaymentProposalPost(DBBWallet* wallet, const UniValue& proposal);

@@ -99,7 +99,9 @@ public:
     //!Return the last (disk) cached known address for receiving coins
     bool GetLastKnownAddress(std::string& address, std::string& keypath);
 
-    bool CreatePaymentProposal(const std::string& address, uint64_t amount, uint64_t feeperkb, UniValue& paymentProposalOut, std::string& errorOut);
+    //!Creates a payment proposal
+    //! If amount is set to 0, it tired to create a proposal with all available funds
+    bool CreatePaymentProposal(const std::string& address, uint64_t amount, uint64_t feeperkb, UniValue& paymentProposalOut, std::string& errorOut, bool checkSingleOutput = false);
 
     bool PublishTxProposal(const UniValue& paymentProposal, std::string& errorOut);
 
