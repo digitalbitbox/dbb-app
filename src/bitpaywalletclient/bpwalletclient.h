@@ -99,7 +99,7 @@ public:
     //!Return the last (disk) cached known address for receiving coins
     bool GetLastKnownAddress(std::string& address, std::string& keypath);
 
-    bool CreatePaymentProposal(const std::string& address, uint64_t amount, uint64_t feeperkb, UniValue& paymentProposalOut, std::string& errorOut);
+    bool CreatePaymentProposal(bool dryRun, const std::string& address, uint64_t amount, uint64_t feeperkb, UniValue& paymentProposalOut, std::string& errorOut);
 
     bool PublishTxProposal(const UniValue& paymentProposal, std::string& errorOut);
 
@@ -157,7 +157,7 @@ public:
 
     //!returns true in case of an available xpub/request key
     bool IsSeeded();
-    
+
     //!whether or not a Copay wallet was joined with the xpub/request key
     bool walletJoined;
 

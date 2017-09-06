@@ -255,6 +255,9 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
     connect(ui->upgradeFirmware, SIGNAL(clicked()), this, SLOT(upgradeFirmwareButton()));
     connect(ui->openSettings, SIGNAL(clicked()), this, SLOT(showSettings()));
     connect(ui->pairDeviceButton, SIGNAL(clicked()), this, SLOT(pairSmartphone()));
+    connect(ui->sendAmount, &QLineEdit::editingFinished, this, &DBBDaemonGui::displayFee);
+    connect(ui->sendToAddress, &QLineEdit::editingFinished, this, &DBBDaemonGui::displayFee);
+    connect(ui->feeLevel, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &DBBDaemonGui::displayFee);
     ui->upgradeFirmware->setVisible(true);
     ui->keypathLabel->setVisible(false);//hide keypath label for now (only tooptip)
     connect(ui->tableWidget, SIGNAL(doubleClicked(QModelIndex)),this,SLOT(historyShowTx(QModelIndex)));
@@ -269,7 +272,7 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
     }
     else
         ui->qrCodeButton->setEnabled(false);
-    
+
     connect(ui->qrCodeButton, SIGNAL(clicked()),this,SLOT(showQrCodeScanner()));
 #else
     ui->qrCodeButton->setVisible(false);
@@ -914,7 +917,7 @@ void DBBDaemonGui::showSetPasswordInfo()
 void DBBDaemonGui::setPasswordProvided(const QString& newPassword, const QString& repeatPassword)
 {
     std::string command = "{\"password\" : \"" + newPassword.toStdString() + "\"}";
-    
+
     if (repeatPassword.toStdString() != sessionPassword) {
         showModalInfo(tr("Incorrect old password"), DBB_PROCESS_INFOLAYER_CONFIRM_WITH_BUTTON);
         return;
@@ -935,7 +938,7 @@ void DBBDaemonGui::setPasswordProvided(const QString& newPassword, const QString
 void DBBDaemonGui::setDeviceNamePasswordProvided(const QString& newPassword, const QString& newName)
 {
     tempNewDeviceName = newName;
-    
+
     std::string command = "{\"password\" : \"" + newPassword.toStdString() + "\"}";
     showModalInfo(tr("Saving Password"));
     if (executeCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
@@ -1067,7 +1070,7 @@ void DBBDaemonGui::ledClicked(dbb_led_blink_mode_t mode)
         command = "{\"led\" : \"blink\"}";
     else if (mode == DBB_LED_BLINK_MODE_ABORT)
         command = "{\"led\" : \"abort\"}";
-    else 
+    else
         return;
     executeCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         UniValue jsonOut;
@@ -1739,7 +1742,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
 
                 //enable UI
                 passwordAccepted();
-                
+
                 if (!cachedWalletAvailableState)
                 {
                     if (sdcard.isBool() && !sdcard.isTrue())
@@ -2168,6 +2171,53 @@ void DBBDaemonGui::updateReceivingAddress(DBBWallet *wallet, const std::string &
     ui->keypathLabel->setText(QString::fromStdString(info));
 }
 
+void DBBDaemonGui::displayFee() {
+    if (!singleWallet->client.IsSeeded())
+        return;
+
+    int64_t amount = 0;
+    if (this->ui->sendAmount->text().size() == 0 || this->ui->sendToAddress->text().size() == 0) {
+        emit this->ui->infoDisplay->setText("");
+        return;
+    }
+    if (!DBB::ParseMoney(this->ui->sendAmount->text().toStdString(), amount)) {
+        emit this->ui->infoDisplay->setText("Invalid amount");
+        return;
+    }
+
+    emit this->ui->infoDisplay->setText("");
+    DBBNetThread* thread = DBBNetThread::DetachThread();
+    thread->currentThread = std::thread([this, thread, amount]() {
+        UniValue proposalOut;
+        std::string errorOut;
+
+        int64_t feeperkb = singleWallet->client.GetFeeForPriority(this->ui->feeLevel->currentIndex());
+        if (feeperkb == 0) {
+            emit changeNetLoading(false);
+            emit shouldShowAlert("Error", tr("Could not estimate fees. Make sure you are online."));
+        } else {
+            bool dryRun = true;
+            if (!singleWallet->client.CreatePaymentProposal(dryRun, this->ui->sendToAddress->text().toStdString(), amount, feeperkb, proposalOut, errorOut)) {
+                emit changeNetLoading(false);
+                emit this->ui->infoDisplay->setText(QString::fromStdString(errorOut));
+            }
+            else
+            {
+                emit changeNetLoading(false);
+                std::string display = "";
+                UniValue fee = find_value(proposalOut, "fee");
+                if (fee.isNum()) {
+                    display = "Fee: " + DBB::formatMoney(fee.get_int64());
+                }
+                emit this->ui->infoDisplay->setText(QString::fromStdString(display));
+            }
+        }
+
+        thread->completed();
+    });
+    setNetLoading(true);
+}
+
 void DBBDaemonGui::createTxProposalPressed()
 {
     if (!singleWallet->client.IsSeeded())
@@ -2187,13 +2237,14 @@ void DBBDaemonGui::createTxProposalPressed()
         UniValue proposalOut;
         std::string errorOut;
 
-        int64_t fee = singleWallet->client.GetFeeForPriority(this->ui->feeLevel->currentIndex());
-        if (fee == 0) {
+        int64_t feeperkb = singleWallet->client.GetFeeForPriority(this->ui->feeLevel->currentIndex());
+        if (feeperkb == 0) {
             emit changeNetLoading(false);
             emit shouldHideModalInfo();
             emit shouldShowAlert("Error", tr("Could not estimate fees. Make sure you are online."));
         } else {
-            if (!singleWallet->client.CreatePaymentProposal(this->ui->sendToAddress->text().toStdString(), amount, fee, proposalOut, errorOut)) {
+            bool dryRun = false;
+            if (!singleWallet->client.CreatePaymentProposal(dryRun, this->ui->sendToAddress->text().toStdString(), amount, feeperkb, proposalOut, errorOut)) {
                 emit changeNetLoading(false);
                 emit shouldHideModalInfo();
                 emit shouldShowAlert("Error", QString::fromStdString(errorOut));
@@ -2365,7 +2416,7 @@ void DBBDaemonGui::updateUIStateMultisigWallets(bool joined)
     this->ui->multisigBalanceKey->setVisible(joined);
     this->ui->multisigBalance->setVisible(joined);
     this->ui->multisigLine->setVisible(joined);
-    this->ui->proposalsLabel->setVisible(joined); 
+    this->ui->proposalsLabel->setVisible(joined);
     if (!joined)
         this->ui->noProposalsAvailable->setVisible(false);
 }
@@ -2395,7 +2446,7 @@ void DBBDaemonGui::SingleWalletUpdateWallets(bool showLoading)
     }
     if (!singleWallet->client.IsSeeded())
         return;
-    
+
     if (this->ui->balanceLabel->text() == "?") {
         this->ui->balanceLabel->setText("Loading...");
         this->ui->singleWalletBalance->setText("Loading...");
@@ -2430,7 +2481,7 @@ void DBBDaemonGui::updateUIMultisigWallets(const UniValue& walletResponse)
     //      the encrypted name is in a JSON string conforming to the SJCL library format, see:
     //      https://bitwiseshiftleft.github.io/sjcl/demo/
     //this->ui->multisigWalletName->setText("<strong>Name:</strong> " + QString::fromStdString(vMultisigWallets[0]->walletRemoteName));
-    
+
     updateUIStateMultisigWallets(vMultisigWallets[0]->client.walletJoined);
 }
 
@@ -2505,10 +2556,10 @@ void DBBDaemonGui::updateTransactionTable(DBBWallet *wallet, bool historyAvailab
             QStandardItem *item = new QStandardItem(QString::fromStdString(addressUV.get_str()));
             item->setToolTip(tr("Double-click for more details"));
             item->setFont(font);
-            item->setTextAlignment(Qt::AlignCenter); 
+            item->setTextAlignment(Qt::AlignCenter);
             transactionTableModel->setItem(cnt, 2, item);
         }
-        
+
         UniValue timeUV = find_value(obj, "time");
         UniValue confirmsUV = find_value(obj, "confirmations");
         if (timeUV.isNum())
@@ -2526,12 +2577,12 @@ void DBBDaemonGui::updateTransactionTable(DBBWallet *wallet, bool historyAvailab
                 tooltip = "0";
                 iconName = ":/icons/confirm0";
             }
-            
+
             QDateTime timestamp;
             timestamp.setTime_t(timeUV.get_int64());
             QStandardItem *item = new QStandardItem(QIcon(iconName), timestamp.toString(Qt::SystemLocaleShortDate));
             item->setToolTip(tooltip + tr(" confirmations"));
-            item->setTextAlignment(Qt::AlignCenter); 
+            item->setTextAlignment(Qt::AlignCenter);
             item->setFont(font);
             transactionTableModel->setItem(cnt, 3, item);
         }
@@ -2545,7 +2596,7 @@ void DBBDaemonGui::updateTransactionTable(DBBWallet *wallet, bool historyAvailab
 
         cnt++;
     }
-  
+
     ui->tableWidget->setModel(transactionTableModel);
     ui->tableWidget->setColumnHidden(0, true);
 
@@ -3096,7 +3147,7 @@ void DBBDaemonGui::updateSettings()
     vMultisigWallets[0]->setSocks5ProxyURL(configData->getSocks5ProxyURL());
     singleWallet->setBackendURL(configData->getBWSBackendURL());
     singleWallet->setSocks5ProxyURL(configData->getSocks5ProxyURL());
-    
+
     if (comServer)
     {
         comServer->setURL(configData->getComServerURL());

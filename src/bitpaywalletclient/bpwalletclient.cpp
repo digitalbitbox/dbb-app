@@ -325,7 +325,7 @@ bool BitPayWalletClient::GetNewAddress(std::string& newAddress,std::string& keyp
 bool BitPayWalletClient::GetLastKnownAddress(std::string& address, std::string& keypath)
 {
     std::unique_lock<std::recursive_mutex> lock(this->cs_client);
-    
+
     if (lastKnownAddressJson.size() == 0)
         return false;
 
@@ -349,7 +349,7 @@ bool BitPayWalletClient::GetLastKnownAddress(std::string& address, std::string& 
 }
 
 
-bool BitPayWalletClient::CreatePaymentProposal(const std::string& address, uint64_t amount, uint64_t feeperkb, UniValue& paymentProposalOut, std::string& errorOut)
+bool BitPayWalletClient::CreatePaymentProposal(bool dryRun, const std::string& address, uint64_t amount, uint64_t feeperkb, UniValue& paymentProposalOut, std::string& errorOut)
 {
     //form request
     UniValue outputs(UniValue::VARR);
@@ -367,6 +367,7 @@ bool BitPayWalletClient::CreatePaymentProposal(const std::string& address, uint6
     UniValue jsonArgs(UniValue::VOBJ);
     jsonArgs.push_back(Pair("feePerKb", feeperkb));
     jsonArgs.push_back(Pair("payProUrl", false));
+    jsonArgs.push_back(Pair("dryRun", dryRun));
     jsonArgs.push_back(Pair("type", "simple"));
     jsonArgs.push_back(Pair("version", "1.0.0"));
     jsonArgs.push_back(Pair("outputs", outputs));
@@ -415,14 +416,6 @@ bool BitPayWalletClient::CreatePaymentProposal(const std::string& address, uint6
                 DBB::LogPrint("Could not unlock funds\n", httpStatusCode);
                 return false;
             }
-            paymentProposalOut.read(response);
-
-            if (!PublishTxProposal(paymentProposalOut, errorOut)) {
-                DBB::LogPrint("Publish tx proposal failed (%s)\n", errorOut.c_str());
-                return false;
-            }
-            
-            return true;
         } else {
             //unknown error
             DBB::LogPrint("Uknown error during CreatePaymentProposal\n");
@@ -439,7 +432,7 @@ bool BitPayWalletClient::CreatePaymentProposal(const std::string& address, uint6
     if (!paymentProposalOut.isObject())
         return false;
 
-    if (!PublishTxProposal(paymentProposalOut, errorOut))
+    if (!dryRun && !PublishTxProposal(paymentProposalOut, errorOut))
         return false;
 
     return true;
@@ -585,7 +578,7 @@ bool BitPayWalletClient::GetFeeLevels()
         return false;
 
     long httpStatusCode = 0;
-    if (!SendRequest("get", "/v1/feelevels/?network=livenet&r="+std::to_string(CheapRandom()), "{}", response, httpStatusCode))
+    if (!SendRequest("get", "/v1/feelevels/?network="+std::string(testnet ? "testnet" : "livenet")+"&r="+std::to_string(CheapRandom()), "{}", response, httpStatusCode))
         return false;
 
     if (httpStatusCode != 200)
@@ -598,7 +591,7 @@ bool BitPayWalletClient::GetFeeLevels()
 int64_t BitPayWalletClient::GetFeeForPriority(int prio)
 {
     std::unique_lock<std::recursive_mutex> lock(this->cs_client);
-    
+
     std::string keyField = "";
     if (prio == 1)
         keyField = "normal";
@@ -793,7 +786,7 @@ void BitPayWalletClient::ParseTxProposal(const UniValue& txProposal, UniValue& c
             txin->script_sig = cstr_new_sz(script->len);
             if (!noScriptPubKey)
                 cstr_append_buf(txin->script_sig, script->str, script->len);
-            
+
             vector_add(tx->vin, txin);
             cstr_free(script, true);
         }
@@ -1227,7 +1220,7 @@ void BitPayWalletClient::SaveLocalData()
         uint32_t lastKnownAddressLength = lastKnownAddressJson.size();
         fwrite(&lastKnownAddressLength, 1, sizeof(lastKnownAddressLength), writeFile);
         fwrite(&lastKnownAddressJson.front(), 1, lastKnownAddressLength, writeFile);
-        
+
         fwrite(&walletJoined, 1, sizeof(walletJoined), writeFile);
     }
     fclose(writeFile);
@@ -1270,7 +1263,7 @@ void BitPayWalletClient::LoadLocalData()
                 return;
         } else
             lastKnownAddressJson = "";
-        
+
         if (fread(&walletJoined, 1, sizeof(walletJoined), fh) != sizeof(walletJoined))
             return;
 
