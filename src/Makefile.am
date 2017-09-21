@@ -6,7 +6,7 @@ AM_LDFLAGS = $(PTHREAD_CFLAGS) $(LIBTOOL_LDFLAGS) $(HARDENED_LDFLAGS)
 AM_CXXFLAGS = $(HARDENED_CXXFLAGS)
 AM_CPPFLAGS += $(HARDENED_CPPFLAGS) -DVERSION=\"$(GIT_VERSION)\"
 
-DBB_INCLUDES = 
+DBB_INCLUDES =
 
 LIBBTC=libbtc/libbtc.la
 UNIVALUE=univalue/libunivalue.la
@@ -33,9 +33,9 @@ $(UNIVALUE): $(wildcard univalue/lib/*) $(wildcard univalue/include/*)
 
 $(HIDAPI):
 	$(AM_V_at)$(MAKE) $(AM_MAKEFLAGS) -C $(@D) $(@F)
-	
+
 HIDAPI_INCLUDES = -I$(srcdir)/hidapi
-	
+
 DBB_INCLUDES += -I$(srcdir)/univalue/include $(LIBBTC_INCLUDES) $(HIDAPI_INCLUDES)
 
 
@@ -50,7 +50,7 @@ libbpwalletclient_a_INCLUDES = bitpaywalletclient/bpwalletclient.h
 libbpwalletclient_a_SOURCES = bitpaywalletclient/bpwalletclient.cpp
 libbpwalletclient_a_CPPFLAGS = $(AM_CPPFLAGS) $(DBB_INCLUDES)
 libbpwalletclient_a_LIBADD = $(HIDAPI) $(LIBBTC) $(UNIVALUE)
- 
+
 dbb_cli_CONFIG_INCLUDES=-I$(builddir)/config
 dbb_cli_INCLUDES=-I$(builddir) -I$(builddir)/obj
 
@@ -60,7 +60,7 @@ dbb_cli_SOURCES = dbb_cli.cpp dbb_util.h dbb_util.cpp
 dbb_cli_CPPFLAGS = $(AM_CPPFLAGS) $(DBB_INCLUDES)
 dbb_cli_CFLAGS =
 dbb_cli_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
-dbb_cli_LDADD = $(UNIVALUE) libdbb.a $(LIBBTC) $(HIDAPI) 
+dbb_cli_LDADD = $(UNIVALUE) libdbb.a $(LIBBTC) $(HIDAPI)
 
 
 #check if we should build the dbb app
@@ -100,7 +100,7 @@ QT_FORMS_UI = \
   qt/ui/qrcodesequence.ui \
   qt/ui/modalview.ui \
   qt/ui/settingsdialog.ui
-	
+
 DBB_GUI_H = \
 	qt/paymentproposal.h \
     qt/signconfirmationdialog.h \
@@ -211,6 +211,14 @@ qt/moc_%.cpp: qt/%.h
 .rc.o:
 	@test -f $(WINDRES)
 	$(AM_V_GEN) $(WINDRES) -DWINDRES_PREPROC -i $< -o $@
+
+qt/locale/all_en.ts: qt/*.h qt/*.cpp qt/ui/*.ui
+	@test -n $(LUPDATE) || echo "lupdate is required for updating translations"
+	$(LUPDATE) -no-obsolete -locations absolute qt/*.cpp qt/*.h qt/ui/*.ui -ts qt/locale/all_en.ts
+
+qt/locale/all_en.qm: qt/locale/all_en.ts
+	@test -n $(LRELEASE) || echo "lrelease is required for updating translations"
+	$(LRELEASE) qt/locale/all_en.ts
 
 endif
 

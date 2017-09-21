@@ -36,7 +36,7 @@ void PaymentProposal::SetData(DBBWallet *walletIn, const std::string copayerID, 
     proposalData = proposalDataIn;
     prevProposalID = prevID;
     nextProposalID = nextID;
-    
+
     UniValue toAddressUni;
     toAddressUni = find_value(proposalData, "toAddress");
     if (!toAddressUni.isStr()) {
@@ -77,14 +77,14 @@ void PaymentProposal::SetData(DBBWallet *walletIn, const std::string copayerID, 
 
             if (copayerID == copayerIDUniValie.get_str() && actionType.get_str() == "accept") {
                 this->ui->actionLabel->setVisible(true);
-                this->ui->actionLabel->setText("You have accepted this proposal.");
+                this->ui->actionLabel->setText(tr("You have accepted this proposal."));
 
                 this->ui->rejectButton->setVisible(false);
                 this->ui->acceptButton->setVisible(false);
             }
             else if (copayerID == copayerIDUniValie.get_str() && actionType.get_str() == "reject") {
                 this->ui->actionLabel->setVisible(true);
-                this->ui->actionLabel->setText("You have rejected this proposal.");
+                this->ui->actionLabel->setText(tr("You have rejected this proposal."));
 
                 this->ui->rejectButton->setVisible(false);
                 this->ui->acceptButton->setVisible(false);

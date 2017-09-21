@@ -33,6 +33,7 @@
 #include "serialize.h"
 
 #include <cstdio>
+#include <cstdlib>
 #include <cmath>
 #include <ctime>
 #include <chrono>
@@ -166,6 +167,7 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
 #ifdef DBB_USE_MULTIMEDIA
     qrCodeScanner = NULL;
 #endif
+    initTranslations();
 
 #if defined(Q_OS_MAC)
     QApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
@@ -265,7 +267,7 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
     }
     else
         ui->qrCodeButton->setEnabled(false);
-    
+
     connect(ui->qrCodeButton, SIGNAL(clicked()),this,SLOT(showQrCodeScanner()));
 #else
     ui->qrCodeButton->setVisible(false);
@@ -364,7 +366,7 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
     this->statusBarUSBIcon->setToolTip(tr("USB Communication Activity Indicator"));
 
     //: translation: status bar info in case of no device has been found
-    this->statusBarLabelLeft = new QLabel(tr("No Device Found"));
+    this->statusBarLabelLeft = new QLabel(tr("No device connected"));
     statusBar()->addWidget(this->statusBarLabelLeft);
 
     statusBar()->addPermanentWidget(this->statusBarNetIcon);
@@ -505,6 +507,28 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
     QTimer::singleShot(200, updateManager, SLOT(checkForUpdateInBackground()));
 }
 
+
+void DBBDaemonGui::initTranslations() {
+    char* dynamic = std::getenv("LANGFILE");
+    if (dynamic != nullptr) {
+        // Load translation file dynamically from a *.qm file to enable the translator to see the results.
+        showAlert("Unsupported", "This is an debug version of the Digital Bitbox software. If this was not indended, please contact support.");
+        if (translator.load(dynamic)) {
+            QApplication::installTranslator(&translator);
+        } else {
+            showAlert("Error", "Language file not found (or it contains no translations)");
+        }
+        return;
+    }
+    // Otherwise, use the translations which are compiled into the binary.
+    QString lang_territory = QLocale::system().name();
+    QString lang = lang_territory;
+    lang.truncate(lang_territory.lastIndexOf('_'));
+    if (translator.load(lang, ":/translations/")) {
+        QApplication::installTranslator(&translator);
+    }
+}
+
 /*
  /////////////////////////////
  Plug / Unplug / GetInfo stack
@@ -527,11 +551,10 @@ void DBBDaemonGui::deviceIsReadyToInteract()
 void DBBDaemonGui::changeConnectedState(bool state, int deviceType)
 {
     bool stateChanged = deviceConnected != state;
-
     if (!state && deviceType != DBB::DBB_DEVICE_NO_DEVICE && deviceType != DBB::DBB_DEVICE_UNKNOWN)
-        this->ui->noDeviceConnectedLabel->setText(tr("Device occupied by another program."));
+        this->ui->noDeviceConnectedLabel->setText(tr("Device occupied by another program"));
     else
-        this->ui->noDeviceConnectedLabel->setText(tr("No device connected."));
+        this->ui->noDeviceConnectedLabel->setText(tr("No device connected"));
 
     // special case for firmware upgrades
     if (upgradeFirmwareState && stateChanged)
@@ -546,9 +569,9 @@ void DBBDaemonGui::changeConnectedState(bool state, int deviceType)
     if (stateChanged) {
         if (state && (deviceType == DBB::DBB_DEVICE_MODE_FIRMWARE || deviceType == DBB::DBB_DEVICE_MODE_FIRMWARE_NO_PASSWORD || deviceType == DBB::DBB_DEVICE_MODE_FIRMWARE_U2F || deviceType == DBB::DBB_DEVICE_MODE_FIRMWARE_U2F_NO_PASSWORD)) {
             deviceConnected = true;
-            //: translation: device connected status bar
             DBB::LogPrint("Device connected\n", "");
-            this->statusBarLabelLeft->setText(tr("Device Connected"));
+            //: translation: device connected status bar
+            this->statusBarLabelLeft->setText(tr("Device connected"));
             this->statusBarButton->setVisible(true);
         }
         else if (state && deviceType == DBB::DBB_DEVICE_MODE_BOOTLOADER && !upgradeFirmwareState) {
@@ -560,7 +583,7 @@ void DBBDaemonGui::changeConnectedState(bool state, int deviceType)
         else {
             deviceConnected = false;
             DBB::LogPrint("Device disconnected\n", "");
-            this->statusBarLabelLeft->setText(tr("No Device Found"));
+            this->statusBarLabelLeft->setText(tr("No device connected"));
             this->statusBarButton->setVisible(false);
             this->ui->noDeviceIcon->setVisible(true);
         }
@@ -589,8 +612,7 @@ void DBBDaemonGui::setLoading(bool status)
 
     this->statusBarUSBIcon->setVisible(status);
 
-    //: translation: login screen info text during password USB check (device info)
-    this->ui->unlockingInfo->setText((status) ? tr("Unlocking Device...") : "");
+    this->ui->unlockingInfo->setVisible(status);
 }
 
 void DBBDaemonGui::setNetLoading(bool status)
@@ -904,7 +926,7 @@ void DBBDaemonGui::showSetPasswordInfo()
 void DBBDaemonGui::setPasswordProvided(const QString& newPassword, const QString& repeatPassword)
 {
     std::string command = "{\"password\" : \"" + newPassword.toStdString() + "\"}";
-    
+
     if (repeatPassword.toStdString() != sessionPassword) {
         showModalInfo(tr("Incorrect old password"), DBB_PROCESS_INFOLAYER_CONFIRM_WITH_BUTTON);
         return;
@@ -925,7 +947,7 @@ void DBBDaemonGui::setPasswordProvided(const QString& newPassword, const QString
 void DBBDaemonGui::setDeviceNamePasswordProvided(const QString& newPassword, const QString& newName)
 {
     tempNewDeviceName = newName;
-    
+
     std::string command = "{\"password\" : \"" + newPassword.toStdString() + "\"}";
     showModalInfo(tr("Saving Password"));
     if (executeCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
@@ -1057,7 +1079,7 @@ void DBBDaemonGui::ledClicked(dbb_led_blink_mode_t mode)
         command = "{\"led\" : \"blink\"}";
     else if (mode == DBB_LED_BLINK_MODE_ABORT)
         command = "{\"led\" : \"abort\"}";
-    else 
+    else
         return;
     executeCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         UniValue jsonOut;
@@ -1241,7 +1263,7 @@ void DBBDaemonGui::upgradeFirmwareWithFile(const QString& fileName)
         DBB::LogPrint("Start upgrading firmware\n", "");
 
         //: translation: started updating firmware info text
-        showModalInfo("<strong>Upgrading Firmware...</strong><br/><br/>Please stand by...", DBB_PROCESS_INFOLAYER_STYLE_NO_INFO);
+        showModalInfo(tr("<strong>Upgrading Firmware...</strong><br/><br/>Please stand by..."), DBB_PROCESS_INFOLAYER_STYLE_NO_INFO);
 
         setFirmwareUpdateHID(true);
         fwUpgradeThread = new std::thread([this,possibleFilename]() {
@@ -1332,14 +1354,14 @@ void DBBDaemonGui::upgradeFirmwareDone(bool status)
 
     if (status)
     {
-        //: translation: successfull firmware update text
         DBB::LogPrint("Firmware successfully upgraded\n", "");
+        //: translation: successfull firmware update text
         showModalInfo(tr("<strong>Upgrade successful!</strong><br><br>Please unplug and replug your Digital Bitbox to continue. <br><font color=\"#6699cc\">Do not tap the touch button this time</font>."), DBB_PROCESS_INFOLAYER_STYLE_REPLUG);
     }
     else
     {
-        //: translation: firmware upgrade error
         DBB::LogPrint("Error while upgrading firmware\n", "");
+        //: translation: firmware upgrade error
         showAlert(tr("Firmware Upgrade"), tr("Error while upgrading firmware. Please unplug and replug your Digital Bitbox."));
     }
 }
@@ -1691,7 +1713,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                 if (name.isStr())
                 {
                     deviceName = QString::fromStdString(name.get_str());
-                    this->ui->deviceNameLabel->setText("<strong>Name:</strong> "+deviceName);
+                    this->ui->deviceNameLabel->setText("<strong>" + tr("Name:") + "</strong> " + deviceName);
                 }
 
                 this->ui->DBBAppVersion->setText("v"+QString(DBB_PACKAGE_VERSION));
@@ -1729,7 +1751,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
 
                 //enable UI
                 passwordAccepted();
-                
+
                 if (!cachedWalletAvailableState)
                 {
                     if (sdcard.isBool() && !sdcard.isTrue())
@@ -1762,7 +1784,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                 {
                     // unlock bootloader
                     //: translation: modal infotext for guiding user to lock the bootloader
-                    showModalInfo("<strong>Lock Firmware...</strong><br/><br/>This prevents further unintentional firmware upgrades.", DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON);
+                    showModalInfo(tr("<strong>Lock Firmware...</strong><br/><br/>This prevents further unintentional firmware upgrades."), DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON);
                     lockBootloader();
                     shouldKeepBootloaderState = false;
                     return;
@@ -1955,7 +1977,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
             UniValue name = find_value(response, "name");
             if (name.isStr()) {
                 deviceName = QString::fromStdString(name.get_str());
-                this->ui->deviceNameLabel->setText("<strong>Name:</strong> "+deviceName);
+                this->ui->deviceNameLabel->setText("<strong>" + tr("Name:") + "</strong> " + deviceName);
                 if (tag == DBB_RESPONSE_TYPE_SET_DEVICE_NAME_CREATE)
                     getInfo();
                 if (tag == DBB_RESPONSE_TYPE_SET_DEVICE_NAME_RECREATE)
@@ -2165,10 +2187,10 @@ void DBBDaemonGui::createTxProposalPressed()
 
     int64_t amount = 0;
     if (this->ui->sendAmount->text().size() == 0 || !DBB::ParseMoney(this->ui->sendAmount->text().toStdString(), amount))
-        return showAlert("Error", "Invalid amount");
+        return showAlert(tr("Error"), tr("Invalid amount"));
 
     if (cachedDeviceLock && !comServer->mobileAppConnected)
-        return showAlert("Error", "2FA enabled but no mobile app found online");
+        return showAlert(tr("Error"), tr("2FA enabled but no mobile app found online"));
 
     this->ui->sendToAddress->clearFocus();
     this->ui->sendAmount->clearFocus();
@@ -2355,7 +2377,7 @@ void DBBDaemonGui::updateUIStateMultisigWallets(bool joined)
     this->ui->multisigBalanceKey->setVisible(joined);
     this->ui->multisigBalance->setVisible(joined);
     this->ui->multisigLine->setVisible(joined);
-    this->ui->proposalsLabel->setVisible(joined); 
+    this->ui->proposalsLabel->setVisible(joined);
     if (!joined)
         this->ui->noProposalsAvailable->setVisible(false);
 }
@@ -2385,12 +2407,12 @@ void DBBDaemonGui::SingleWalletUpdateWallets(bool showLoading)
     }
     if (!singleWallet->client.IsSeeded())
         return;
-    
-    if (this->ui->balanceLabel->text() == "?") {
-        this->ui->balanceLabel->setText("Loading...");
-        this->ui->singleWalletBalance->setText("Loading...");
 
-        this->ui->currentAddress->setText("Loading...");
+    if (this->ui->balanceLabel->text() == "?") {
+        this->ui->balanceLabel->setText(tr("Loading..."));
+        this->ui->singleWalletBalance->setText(tr("Loading..."));
+
+        this->ui->currentAddress->setText(tr("Loading..."));
     }
 
     singleWalletIsUpdating = true;
@@ -2420,7 +2442,7 @@ void DBBDaemonGui::updateUIMultisigWallets(const UniValue& walletResponse)
     //      the encrypted name is in a JSON string conforming to the SJCL library format, see:
     //      https://bitwiseshiftleft.github.io/sjcl/demo/
     //this->ui->multisigWalletName->setText("<strong>Name:</strong> " + QString::fromStdString(vMultisigWallets[0]->walletRemoteName));
-    
+
     updateUIStateMultisigWallets(vMultisigWallets[0]->client.walletJoined);
 }
 
@@ -2464,10 +2486,10 @@ void DBBDaemonGui::updateTransactionTable(DBBWallet *wallet, bool historyAvailab
 
     transactionTableModel = new  QStandardItemModel(history.size(), 4, this);
 
-    transactionTableModel->setHeaderData(0, Qt::Horizontal, QObject::tr("TXID"));
-    transactionTableModel->setHeaderData(1, Qt::Horizontal, QObject::tr("Amount"));
-    transactionTableModel->setHeaderData(2, Qt::Horizontal, QObject::tr("Address"));
-    transactionTableModel->setHeaderData(3, Qt::Horizontal, QObject::tr("Date"));
+    transactionTableModel->setHeaderData(0, Qt::Horizontal, tr("TXID"));
+    transactionTableModel->setHeaderData(1, Qt::Horizontal, tr("Amount"));
+    transactionTableModel->setHeaderData(2, Qt::Horizontal, tr("Address"));
+    transactionTableModel->setHeaderData(3, Qt::Horizontal, tr("Date"));
 
     int cnt = 0;
     for (const UniValue &obj : history.getValues())
@@ -2495,10 +2517,10 @@ void DBBDaemonGui::updateTransactionTable(DBBWallet *wallet, bool historyAvailab
             QStandardItem *item = new QStandardItem(QString::fromStdString(addressUV.get_str()));
             item->setToolTip(tr("Double-click for more details"));
             item->setFont(font);
-            item->setTextAlignment(Qt::AlignCenter); 
+            item->setTextAlignment(Qt::AlignCenter);
             transactionTableModel->setItem(cnt, 2, item);
         }
-        
+
         UniValue timeUV = find_value(obj, "time");
         UniValue confirmsUV = find_value(obj, "confirmations");
         if (timeUV.isNum())
@@ -2516,12 +2538,12 @@ void DBBDaemonGui::updateTransactionTable(DBBWallet *wallet, bool historyAvailab
                 tooltip = "0";
                 iconName = ":/icons/confirm0";
             }
-            
+
             QDateTime timestamp;
             timestamp.setTime_t(timeUV.get_int64());
             QStandardItem *item = new QStandardItem(QIcon(iconName), timestamp.toString(Qt::SystemLocaleShortDate));
             item->setToolTip(tooltip + tr(" confirmations"));
-            item->setTextAlignment(Qt::AlignCenter); 
+            item->setTextAlignment(Qt::AlignCenter);
             item->setFont(font);
             transactionTableModel->setItem(cnt, 3, item);
         }
@@ -2535,7 +2557,7 @@ void DBBDaemonGui::updateTransactionTable(DBBWallet *wallet, bool historyAvailab
 
         cnt++;
     }
-  
+
     ui->tableWidget->setModel(transactionTableModel);
     ui->tableWidget->setColumnHidden(0, true);
 
@@ -3033,7 +3055,7 @@ void DBBDaemonGui::comServerMessageParse(const QString& msg)
     else if (possibleActionObject.isStr() && possibleActionObject.get_str() == "pong")
     {
         lastPing = 0;
-        this->statusBarVDeviceIcon->setToolTip(tr("Verification Device Connected"));
+        this->statusBarVDeviceIcon->setToolTip(tr("Verification device connected"));
         this->statusBarVDeviceIcon->setVisible(true);
         comServer->mobileAppConnected = true;
     }
@@ -3086,7 +3108,7 @@ void DBBDaemonGui::updateSettings()
     vMultisigWallets[0]->setSocks5ProxyURL(configData->getSocks5ProxyURL());
     singleWallet->setBackendURL(configData->getBWSBackendURL());
     singleWallet->setSocks5ProxyURL(configData->getSocks5ProxyURL());
-    
+
     if (comServer)
     {
         comServer->setURL(configData->getComServerURL());

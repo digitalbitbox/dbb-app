@@ -24,10 +24,10 @@ ModalView::ModalView(QWidget* parent) : QWidget(parent), ui(new Ui::ModalView), 
     connect(this->ui->setPasswordOld, SIGNAL(textChanged(const QString&)), this, SLOT(inputCheck(const QString&)));
     connect(this->ui->setPasswordNew, SIGNAL(textChanged(const QString&)), this, SLOT(inputCheck(const QString&)));
     connect(this->ui->setPasswordRepeat, SIGNAL(textChanged(const QString&)), this, SLOT(inputCheck(const QString&)));
-    
+
     connect(this->ui->setDeviceSubmit, SIGNAL(clicked()), this, SLOT(deviceSubmitProvided()));
     connect(this->ui->setDeviceCancel, SIGNAL(clicked()), this, SLOT(deviceCancelProvided()));
-    
+
     connect(this->ui->okButton, SIGNAL(clicked()), this, SLOT(okButtonAction()));
     connect(this->ui->showDetailsButton, SIGNAL(clicked()), this, SLOT(detailButtonAction()));
     connect(this->ui->abortButton, SIGNAL(clicked()), this, SLOT(twoFACancelPressed()));
@@ -139,7 +139,7 @@ void ModalView::showSetNewWallet()
     ui->uninizializedInfoLabel->setVisible(true);
     ui->setDeviceName->setVisible(true);
     ui->setPasswordNew->setVisible(true);
-    ui->setPasswordNew->setPlaceholderText("Password");
+    ui->setPasswordNew->setPlaceholderText(tr("Password"));
     ui->setPasswordRepeat->setVisible(true);
     ui->setDevicePasswordInfo->setVisible(true);
     ui->setDeviceName->setFocus();
@@ -154,7 +154,7 @@ void ModalView::showSetPassword()
     ui->setDeviceWidget->setVisible(true);
     ui->setPasswordOld->setVisible(true);
     ui->setPasswordNew->setVisible(true);
-    ui->setPasswordNew->setPlaceholderText("New password");
+    ui->setPasswordNew->setPlaceholderText(tr("New password"));
     ui->setPasswordRepeat->setVisible(true);
     ui->setDevicePasswordInfo->setVisible(true);
     ui->setPasswordOld->setFocus();
@@ -388,12 +388,12 @@ void ModalView::keyPressEvent(QKeyEvent* event)
 }
 
 void ModalView::inputCheck(const QString& sham)
-{    
+{
     if (ui->setDeviceName->isVisible() || ui->setDeviceNameOnly->isVisible()) {
         QString name = QString();
-        if (ui->setDeviceName->isVisible()) 
+        if (ui->setDeviceName->isVisible())
             name = ui->setDeviceName->text();
-        else if (ui->setDeviceNameOnly->isVisible()) 
+        else if (ui->setDeviceNameOnly->isVisible())
             name = ui->setDeviceNameOnly->text();
 
         if (name.size() < 1)
@@ -419,7 +419,7 @@ void ModalView::inputCheck(const QString& sham)
             return;
         }
     }
-    
+
     if (ui->setPasswordNew->isVisible()) {
         if (ui->setPasswordNew->text().size() < 4)
         {
