@@ -104,9 +104,6 @@ DBBDaemonGui::~DBBDaemonGui()
     if (statusBarLabelLeft) {
         delete statusBarLabelLeft; statusBarLabelLeft = NULL;
     }
-    if (statusBarLabelRight) {
-        delete statusBarLabelRight; statusBarLabelRight = NULL;
-    }
     if (configData) {
         delete configData; configData = NULL;
     }
@@ -137,7 +134,6 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
                                               openedWithBitcoinURI(0),
                                               ui(new Ui::MainWindow),
                                               statusBarButton(0),
-                                              statusBarLabelRight(0),
                                               statusBarLabelLeft(0),
                                               backupDialog(0),
                                               getAddressDialog(0),
@@ -371,7 +367,6 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
     this->statusBarLabelLeft = new QLabel(tr("No Device Found"));
     statusBar()->addWidget(this->statusBarLabelLeft);
 
-    this->statusBarLabelRight = new QLabel("");
     statusBar()->addPermanentWidget(this->statusBarNetIcon);
     statusBar()->addPermanentWidget(this->statusBarUSBIcon);
     statusBar()->addPermanentWidget(this->statusBarVDeviceIcon);
@@ -592,9 +587,6 @@ void DBBDaemonGui::setLoading(bool status)
         touchButtonInfo = false;
     }
 
-    //: translation: status bar info text during the time of USB communication
-    this->statusBarLabelRight->setText((status) ? tr("processing...") : "");
-
     this->statusBarUSBIcon->setVisible(status);
 
     //: translation: login screen info text during password USB check (device info)
@@ -603,8 +595,6 @@ void DBBDaemonGui::setLoading(bool status)
 
 void DBBDaemonGui::setNetLoading(bool status)
 {
-    //: translation: status bar info text during network activity (copay)
-    this->statusBarLabelRight->setText((status) ? tr("loading...") : "");
     this->statusBarNetIcon->setVisible(status);
 }
 

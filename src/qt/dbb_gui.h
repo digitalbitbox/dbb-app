@@ -165,7 +165,6 @@ private:
     QTimer *walletUpdateTimer;
     QStandardItemModel *transactionTableModel;
     QLabel* statusBarLabelLeft;
-    QLabel* statusBarLabelRight;
     QPushButton* statusBarButton;
     QPushButton* statusBarVDeviceIcon;
     QPushButton* statusBarNetIcon;
