@@ -25,7 +25,7 @@ BackupDialog::BackupDialog(QWidget *parent) :
 void BackupDialog::showLoading(bool creatingBackup)
 {
     //simple loading through list updating
-    QList<QString> loadingList; loadingList << tr((creatingBackup) ? "creating backup..." : "loading...");
+    QList<QString> loadingList; loadingList << ((creatingBackup) ? tr("creating backup...") : tr("loading..."));
     ui->listView->setModel(new QStringListModel(loadingList));
     loadingState = true;
 }
@@ -50,7 +50,7 @@ void BackupDialog::restoreBackupPressed()
 {
     if (loadingState)
         return;
-    
+
     QModelIndex index = ui->listView->currentIndex();
     emit restoreFromBackup(index.data().toString());
 }

@@ -12,6 +12,7 @@
 #include <QPropertyAnimation>
 #include <QStandardItemModel>
 #include <QUuid>
+#include <QTranslator>
 
 #include <functional>
 #include <thread>
@@ -112,7 +113,7 @@ public:
 public slots:
 
 signals:
-    //emitted when the device state has chaned (connected / disconnected)
+    //emitted when the device state has changed (connected / disconnected)
     void deviceStateHasChanged(bool state, int deviceType);
     //emitted when the network activity has changed
     void changeNetLoading(bool state);
@@ -155,6 +156,7 @@ signals:
     void reloadGetinfo();
 
 private:
+    QTranslator translator;
     QString *openedWithBitcoinURI;
     Ui::MainWindow* ui;
     DBBUpdateManager *updateManager;
@@ -165,7 +167,6 @@ private:
     QTimer *walletUpdateTimer;
     QStandardItemModel *transactionTableModel;
     QLabel* statusBarLabelLeft;
-    QLabel* statusBarLabelRight;
     QPushButton* statusBarButton;
     QPushButton* statusBarVDeviceIcon;
     QPushButton* statusBarNetIcon;
@@ -204,8 +205,10 @@ private:
     DBBQRCodeScanner *qrCodeScanner; //!< QRCode scanner object
 #endif
 
+
+    void initTranslations();
     void createMenuBar();
-    
+
     //== Plug / Unplug ==
     //! gets called when the device was sucessfully unlocked (password accepted)
     void deviceIsReadyToInteract();

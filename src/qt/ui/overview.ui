@@ -51,7 +51,7 @@
      </sizepolicy>
     </property>
     <property name="currentIndex">
-     <number>3</number>
+     <number>1</number>
     </property>
     <widget class="QWidget" name="overview">
      <widget class="QWidget" name="verticalLayoutWidget">
@@ -241,7 +241,7 @@ background-color: rgba(240,240,240,255);
             <enum>QAbstractItemView::ScrollPerPixel</enum>
            </property>
            <attribute name="horizontalHeaderVisible">
-            <bool>true</bool>
+            <bool>false</bool>
            </attribute>
            <attribute name="horizontalHeaderStretchLastSection">
             <bool>true</bool>
@@ -294,7 +294,7 @@ background-color: rgba(240,240,240,255);
         </rect>
        </property>
        <property name="text">
-        <string>No Device Connected.</string>
+        <string notr="true">No Device Connected.</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignHCenter|Qt::AlignTop</set>
@@ -453,7 +453,7 @@ background-color: rgba(240,240,240,255);
             </font>
            </property>
            <property name="text">
-            <string>-</string>
+            <string notr="true">-</string>
            </property>
            <property name="textInteractionFlags">
             <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
@@ -936,7 +936,7 @@ background-color: rgba(240,240,240,255);
                 <string notr="true">color: #888888</string>
                </property>
                <property name="text">
-                <string/>
+                <string notr="true"/>
                </property>
                <property name="alignment">
                 <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
@@ -997,7 +997,7 @@ background-color: rgba(240,240,240,255);
                 <string notr="true">color: #888888</string>
                </property>
                <property name="text">
-                <string>TextLabel</string>
+                <string notr="true"/>
                </property>
                <property name="alignment">
                 <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
@@ -1180,7 +1180,7 @@ background-color: rgba(240,240,240,255);
          <item>
           <widget class="QPushButton" name="qrCodeButton">
            <property name="toolTip">
-            <string>Scan QRCode</string>
+            <string>Scan QR Code</string>
            </property>
            <property name="icon">
             <iconset>
@@ -1217,7 +1217,7 @@ background-color: rgba(240,240,240,255);
             <bool>false</bool>
            </property>
            <property name="placeholderText">
-            <string> Amount BTC</string>
+            <string>Amount BTC</string>
            </property>
           </widget>
          </item>
@@ -1343,7 +1343,7 @@ background-color: rgba(240,240,240,255);
        <item>
         <widget class="QLabel" name="keypathLabel">
          <property name="text">
-          <string>TextLabel</string>
+          <string notr="true">TextLabel</string>
          </property>
          <property name="alignment">
           <set>Qt::AlignCenter</set>
@@ -1731,6 +1731,11 @@ background-color: rgba(0,0,0, 0%)</string>
    <class>ModalView</class>
    <extends>QWidget</extends>
    <header>modalview.h</header>
+  </customwidget>
+  <customwidget>
+   <class>ClickableLabel</class>
+   <extends>QWidget</extends>
+   <header>clickablelabel.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

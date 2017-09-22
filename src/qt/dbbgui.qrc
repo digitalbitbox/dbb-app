@@ -46,10 +46,13 @@
         <file alias="activearrow">res/theme/active_arrow.png</file>
     </qresource>
     <qresource prefix="/fonts">
-    <file alias="AlegreyaSans-Regular">res/fonts/AlegreyaSans-Regular.otf</file>
-    <file alias="AlegreyaSans-Bold">res/fonts/AlegreyaSans-Bold.otf</file>
-    <file alias="BebasNeue-Thin">res/fonts/BebasNeue-Thin.ttf</file>
-    <file alias="BebasNeue-Regular">res/fonts/BebasNeue-Regular.ttf</file>
-    <file alias="BebasKai-Regular">res/fonts/BebasKai-Regular.ttf</file>
+        <file alias="AlegreyaSans-Regular">res/fonts/AlegreyaSans-Regular.otf</file>
+        <file alias="AlegreyaSans-Bold">res/fonts/AlegreyaSans-Bold.otf</file>
+        <file alias="BebasNeue-Thin">res/fonts/BebasNeue-Thin.ttf</file>
+        <file alias="BebasNeue-Regular">res/fonts/BebasNeue-Regular.ttf</file>
+        <file alias="BebasKai-Regular">res/fonts/BebasKai-Regular.ttf</file>
+    </qresource>
+    <qresource prefix="/translations">
+        <file alias="en">locale/all_en.qm</file>
     </qresource>
 </RCC>

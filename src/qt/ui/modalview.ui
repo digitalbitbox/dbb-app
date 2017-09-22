@@ -94,8 +94,8 @@
      <rect>
       <x>-1</x>
       <y>-1</y>
-      <width>400</width>
-      <height>359</height>
+      <width>429</width>
+      <height>531</height>
      </rect>
     </property>
     <layout class="QVBoxLayout" name="verticalLayout_6">
@@ -220,6 +220,9 @@
                               border-radius: 5px;
                               padding:4px;</string>
        </property>
+       <property name="text">
+        <string/>
+       </property>
        <property name="maxLength">
         <number>1048</number>
        </property>
@@ -258,7 +261,7 @@
      <item>
       <layout class="QHBoxLayout" name="horizontalLayout">
        <property name="spacing">
-        <number>-1</number>
+        <number>6</number>
        </property>
        <property name="topMargin">
         <number>0</number>
@@ -425,7 +428,7 @@
      <rect>
       <x>0</x>
       <y>0</y>
-      <width>440</width>
+      <width>552</width>
       <height>80</height>
      </rect>
     </property>
@@ -436,7 +439,7 @@
         <string notr="true">color: white;</string>
        </property>
        <property name="text">
-        <string>TextLabel</string>
+        <string notr="true">TextLabel</string>
        </property>
       </widget>
      </item>
@@ -496,7 +499,7 @@
         <string notr="true">color:white;font-size:18pt;</string>
        </property>
        <property name="text">
-        <string>TextLabel</string>
+        <string notr="true">TextLabel</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
