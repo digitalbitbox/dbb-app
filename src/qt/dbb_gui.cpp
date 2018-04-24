@@ -253,6 +253,9 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
     connect(ui->upgradeFirmware, SIGNAL(clicked()), this, SLOT(upgradeFirmwareButton()));
     connect(ui->openSettings, SIGNAL(clicked()), this, SLOT(showSettings()));
     connect(ui->pairDeviceButton, SIGNAL(clicked()), this, SLOT(pairSmartphone()));
+    connect(ui->sendAmount, &QLineEdit::editingFinished, this, &DBBDaemonGui::displayFee);
+    connect(ui->sendToAddress, &QLineEdit::editingFinished, this, &DBBDaemonGui::displayFee);
+    connect(ui->feeLevel, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &DBBDaemonGui::displayFee);
     ui->upgradeFirmware->setVisible(true);
     ui->keypathLabel->setVisible(false);//hide keypath label for now (only tooptip)
     connect(ui->tableWidget, SIGNAL(doubleClicked(QModelIndex)),this,SLOT(historyShowTx(QModelIndex)));
@@ -2170,6 +2173,53 @@ void DBBDaemonGui::updateReceivingAddress(DBBWallet *wallet, const std::string &
     ui->keypathLabel->setText(QString::fromStdString(info));
 }
 
+void DBBDaemonGui::displayFee() {
+    if (!singleWallet->client.IsSeeded())
+        return;
+
+    int64_t amount = 0;
+    if (this->ui->sendAmount->text().size() == 0 || this->ui->sendToAddress->text().size() == 0) {
+        emit this->ui->infoDisplay->setText("");
+        return;
+    }
+    if (!DBB::ParseMoney(this->ui->sendAmount->text().toStdString(), amount)) {
+        emit this->ui->infoDisplay->setText("Invalid amount");
+        return;
+    }
+
+    emit this->ui->infoDisplay->setText("");
+    DBBNetThread* thread = DBBNetThread::DetachThread();
+    thread->currentThread = std::thread([this, thread, amount]() {
+        UniValue proposalOut;
+        std::string errorOut;
+
+        int64_t feeperkb = singleWallet->client.GetFeeForPriority(this->ui->feeLevel->currentIndex());
+        if (feeperkb == 0) {
+            emit changeNetLoading(false);
+            emit shouldShowAlert("Error", tr("Could not estimate fees. Make sure you are online."));
+        } else {
+            bool dryRun = true;
+            if (!singleWallet->client.CreatePaymentProposal(dryRun, this->ui->sendToAddress->text().toStdString(), amount, feeperkb, proposalOut, errorOut)) {
+                emit changeNetLoading(false);
+                emit this->ui->infoDisplay->setText(QString::fromStdString(errorOut));
+            }
+            else
+            {
+                emit changeNetLoading(false);
+                std::string display = "";
+                UniValue fee = find_value(proposalOut, "fee");
+                if (fee.isNum()) {
+                    display = "Fee: " + DBB::formatMoney(fee.get_int64());
+                }
+                emit this->ui->infoDisplay->setText(QString::fromStdString(display));
+            }
+        }
+
+        thread->completed();
+    });
+    setNetLoading(true);
+}
+
 void DBBDaemonGui::createTxProposalPressed()
 {
     if (!singleWallet->client.IsSeeded())
@@ -2189,13 +2239,14 @@ void DBBDaemonGui::createTxProposalPressed()
         UniValue proposalOut;
         std::string errorOut;
 
-        int64_t fee = singleWallet->client.GetFeeForPriority(this->ui->feeLevel->currentIndex());
-        if (fee == 0) {
+        int64_t feeperkb = singleWallet->client.GetFeeForPriority(this->ui->feeLevel->currentIndex());
+        if (feeperkb == 0) {
             emit changeNetLoading(false);
             emit shouldHideModalInfo();
             emit shouldShowAlert("Error", tr("Could not estimate fees. Make sure you are online."));
         } else {
-            if (!singleWallet->client.CreatePaymentProposal(this->ui->sendToAddress->text().toStdString(), amount, fee, proposalOut, errorOut)) {
+            bool dryRun = false;
+            if (!singleWallet->client.CreatePaymentProposal(dryRun, this->ui->sendToAddress->text().toStdString(), amount, feeperkb, proposalOut, errorOut)) {
                 emit changeNetLoading(false);
                 emit shouldHideModalInfo();
                 emit shouldShowAlert("Error", QString::fromStdString(errorOut));

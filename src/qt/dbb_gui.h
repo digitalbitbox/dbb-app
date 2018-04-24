@@ -357,6 +357,8 @@ private slots:
     void getXPub(const std::string& keypath, dbb_response_type_t response_type = DBB_RESPONSE_TYPE_XPUB_VERIFY, dbb_address_style_t address_type = DBB_ADDRESS_STYLE_P2PKH);
     //!gets called when a new address is available
     void updateReceivingAddress(DBBWallet *wallet, const std::string &newAddress, const std::string &keypath);
+    //!display fee calculated based on a payment proposal based on the UI values.
+    void displayFee();
     //!check the UI values and create a payment proposal from them, sign and post them
     void createTxProposalPressed();
     //!Report about a submitted payment proposal
