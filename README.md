@@ -65,7 +65,7 @@ Libbtc is included as git subtree and will be compiled during the normal build p
 
 OSX:
 
-    brew install hidapi libevent qt5
+    brew install hidapi libevent qt5 qrencode
 
 #### Linux (Ubuntu 15.04):
 
