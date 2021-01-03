@@ -321,7 +321,7 @@ AC_DEFINE_UNQUOTED([ENABLE_DBB_APP],[1],[Define to 1 to enable the dbb app])
 fi
 
 if test x$bitcoin_enable_qt = xno; then
-  if test x$enable_daemon] = xno; then
+  if test x$enable_daemon = xno; then
   AM_CONDITIONAL([ENABLE_DBB_APP],[test x$enable_daemon = xyes])
   else
   AM_CONDITIONAL([ENABLE_DBB_APP],[test x$enable_daemon = xyes])

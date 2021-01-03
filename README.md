@@ -94,7 +94,7 @@ Optionally probably want to create out-of-tree directory to save latest source &
     make -j4 BASE_CACHE=(absolute-path-here)/deps-cache/ SOURCES_PATH=(absolute-path-here)/deps-cache/sources/
     cd ..
     ./autogen.sh
-    ./configure --prefix=`pwd`/depends/x86_64-pc-linux-gnu --enable-debug --with-gui=qt5
+    ./configure --prefix=`pwd`/depends/x86_64-pc-linux-gnu --enable-debug --with-gui=qt5 --enable-libusb
     make
 
 
