@@ -147,7 +147,8 @@ public:
                      const std::string& url,
                      const std::string& args,
                      std::string& responseOut,
-                     long& httpStatusCodeOut);
+                     long& httpStatusCodeOut,
+                     bool bws = true);
 
     //!set the master extended public key
     void setMasterPubKey(const std::string& xPubKey);

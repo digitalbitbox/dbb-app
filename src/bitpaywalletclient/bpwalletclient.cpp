@@ -585,6 +585,16 @@ bool BitPayWalletClient::GetFeeLevels()
         return false;
 
     long httpStatusCode = 0;
+    if (SendRequest("get", "https://www.digitalbitbox.com/fees/levels.json?r="+std::to_string(CheapRandom()), "{}", response, httpStatusCode, false)) {
+        // we could read our "internal" fees
+        feeLevelsObject.read(response);
+        if (response.size() > 10 && feeLevelsObject.isArray()) {
+            return true;
+        }
+    }
+
+    response.clear();
+    httpStatusCode = 0;
     if (!SendRequest("get", "/v1/feelevels/?network=livenet&r="+std::to_string(CheapRandom()), "{}", response, httpStatusCode))
         return false;
 
@@ -623,7 +633,7 @@ int64_t BitPayWalletClient::GetFeeForPriority(int prio)
         }
     }
 
-    return 2000; //default fallback feerate
+    return 0; //don't use a fallback fee, abort at this point
 }
 
 bool BitPayWalletClient::GetWallets(std::string& response)
@@ -1120,7 +1130,8 @@ bool BitPayWalletClient::SendRequest(const std::string& method,
                                      const std::string& url,
                                      const std::string& args,
                                      std::string& responseOut,
-                                     long& httpcodeOut)
+                                     long& httpcodeOut,
+                                     bool bws)
 {
     CURL* curl;
     CURLcode res;
@@ -1132,18 +1143,20 @@ bool BitPayWalletClient::SendRequest(const std::string& method,
     if (curl) {
         struct curl_slist* chunk = NULL;
         std::string hashOut;
-        std::string signature = SignRequest(method, url, args, hashOut);
-        if (signature.empty()) {
+        std::string signature = bws ? SignRequest(method, url, args, hashOut) : "";
+        if (signature.empty() && bws) {
             BP_LOG_MSG("SignRequest failed.");
             DBB::LogPrint("SignRequest failed.", "");
             success = false;
         } else {
-            chunk = curl_slist_append(chunk, ("x-identity: " + GetCopayerId()).c_str()); //requestPubKey).c_str());
-            chunk = curl_slist_append(chunk, ("x-signature: " + signature).c_str());
-            chunk = curl_slist_append(chunk, ("x-client-version: dbb-1.0.0"));
+            if (bws) {
+                chunk = curl_slist_append(chunk, ("x-identity: " + GetCopayerId()).c_str()); //requestPubKey).c_str());
+                chunk = curl_slist_append(chunk, ("x-signature: " + signature).c_str());
+                chunk = curl_slist_append(chunk, ("x-client-version: dbb-1.0.0"));
+            }
             chunk = curl_slist_append(chunk, "Content-Type: application/json");
             res = curl_easy_setopt(curl, CURLOPT_HTTPHEADER, chunk);
-            curl_easy_setopt(curl, CURLOPT_URL, (baseURL + url).c_str());
+            curl_easy_setopt(curl, CURLOPT_URL, (bws ? (baseURL + url) : url).c_str());
             if (method == "post")
                 curl_easy_setopt(curl, CURLOPT_POSTFIELDS, args.c_str());
 
